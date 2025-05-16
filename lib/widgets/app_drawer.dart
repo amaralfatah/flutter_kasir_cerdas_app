@@ -1,8 +1,8 @@
-// lib/widgets/app_drawer.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_kasir_cerdas_app/features/auth/providers/auth_provider.dart';
 import 'package:flutter_kasir_cerdas_app/features/auth/screens/login_screen.dart';
 import 'package:flutter_kasir_cerdas_app/features/home/screens/home_screen.dart';
+import 'package:flutter_kasir_cerdas_app/features/management/screens/management_screen.dart';
 import 'package:provider/provider.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -69,6 +69,41 @@ class AppDrawer extends StatelessWidget {
                   // We are already on home page so just close drawer
                   Navigator.popUntil(context, (route) => route.isFirst);
                 }
+              }
+            },
+          ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.inventory_2,
+            title: 'Management',
+            isSelected: currentPage == 'management',
+            onTap: () {
+              if (currentPage != 'management') {
+                Navigator.pop(context); // Close drawer
+                
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManagementScreen(),
+                  ),
+                );
+              }
+            },
+          ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.shopping_cart,
+            title: 'Sales Transaction',
+            isSelected: currentPage == 'sales',
+            onTap: () {
+              if (currentPage != 'sales') {
+                Navigator.pop(context); // Close drawer
+                // Sales page would be implemented here
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sales page not implemented yet'),
+                  ),
+                );
               }
             },
           ),
