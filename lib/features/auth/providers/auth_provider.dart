@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart';
+// lib/features/auth/providers/auth_provider.dart
+import 'package:flutter/foundation.dart';
+
+import '../../../core/api/api_client.dart';
 import '../../../models/user.dart';
 import '../services/auth_service.dart';
 
@@ -7,37 +10,36 @@ enum AuthStatus {
   authenticated,
   unauthenticated,
   authenticating,
-  error,
 }
 
-class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
-  
-  User? _user;
+class AuthProvider with ChangeNotifier {
+  final AuthService _authService;
+
   AuthStatus _status = AuthStatus.initial;
+  User? _user;
   String _errorMessage = '';
-  
+  bool _rememberMe = false;
+
   // Getters
-  User? get user => _user;
   AuthStatus get status => _status;
+  User? get user => _user;
   String get errorMessage => _errorMessage;
+  bool get rememberMe => _rememberMe;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
-  bool get isLoading => _status == AuthStatus.authenticating;
-  
-  // Constructor - checks if the user is already authenticated
-  AuthProvider() {
+
+  AuthProvider({AuthService? authService})
+      : _authService = authService ?? AuthService() {
+    // Check authentication status on initialization
     _checkAuthStatus();
   }
-  
-  // Check the current authentication status
+
+  // Initialize by checking if user is already logged in
   Future<void> _checkAuthStatus() async {
-    _status = AuthStatus.authenticating;
-    notifyListeners();
-    
     try {
-      final isAuthenticated = await _authService.isAuthenticated();
-      
-      if (isAuthenticated) {
+      final isAuth = await _authService.isAuthenticated();
+      _rememberMe = await _authService.getRememberMe();
+
+      if (isAuth) {
         _user = await _authService.getCurrentUser();
         _status = AuthStatus.authenticated;
       } else {
@@ -45,32 +47,45 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       _status = AuthStatus.unauthenticated;
-      _errorMessage = e.toString();
     }
-    
     notifyListeners();
   }
-  
-  // Login
+
+  // Login method
   Future<bool> login(String email, String password, bool rememberMe) async {
     _status = AuthStatus.authenticating;
     _errorMessage = '';
     notifyListeners();
-    
+
     try {
-      _user = await _authService.login(email, password, rememberMe);
-      _status = AuthStatus.authenticated;
+      final response = await _authService.login(email, password, rememberMe);
+
+      if (response.status) {
+        // Load the user data after successful login
+        _user = await _authService.getCurrentUser();
+        _rememberMe = rememberMe;
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.message ?? 'Login failed';
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return false;
+      }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      _status = AuthStatus.unauthenticated;
       notifyListeners();
-      return true;
+      return false;
     } catch (e) {
-      _status = AuthStatus.error;
-      _errorMessage = e.toString();
+      _errorMessage = 'An unexpected error occurred';
+      _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
     }
   }
-  
-  // Register
+
   Future<bool> register({
     required String name,
     required String email,
@@ -78,15 +93,15 @@ class AuthProvider extends ChangeNotifier {
     required String passwordConfirmation,
     required String shopName,
     required String shopAddress,
-    required String shopPhone,
+    String? shopPhone,
     String? shopTaxId,
   }) async {
     _status = AuthStatus.authenticating;
     _errorMessage = '';
     notifyListeners();
-    
+
     try {
-      _user = await _authService.register(
+      final response = await _authService.register(
         name: name,
         email: email,
         password: password,
@@ -96,42 +111,58 @@ class AuthProvider extends ChangeNotifier {
         shopPhone: shopPhone,
         shopTaxId: shopTaxId,
       );
-      _status = AuthStatus.authenticated;
+
+      if (response.status) {
+        // Load the user data after successful registration
+        _user = await _authService.getCurrentUser();
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.message ?? 'Registration failed';
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return false;
+      }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      _status = AuthStatus.unauthenticated;
       notifyListeners();
-      return true;
+      return false;
     } catch (e) {
-      _status = AuthStatus.error;
-      _errorMessage = e.toString();
+      _errorMessage = 'An unexpected error occurred';
+      _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
     }
   }
-  
-  // Logout
-  Future<void> logout() async {
-    _status = AuthStatus.authenticating;
-    notifyListeners();
-    
+
+  Future<bool> logout() async {
     try {
       await _authService.logout();
       _user = null;
       _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
     } catch (e) {
-      _status = AuthStatus.error;
-      _errorMessage = e.toString();
+      debugPrint('Error during logout: $e');
+      // Still consider logout successful even if there's an error
+      _user = null;
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
     }
-    
+  }
+
+  // Reset error message
+  void resetError() {
+    _errorMessage = '';
     notifyListeners();
   }
-  
-  // Refresh user data
-  Future<void> refreshUser() async {
-    try {
-      _user = await _authService.fetchCurrentUser();
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-    }
+
+  // Toggle remember me
+  void setRememberMe(bool value) {
+    _rememberMe = value;
+    notifyListeners();
   }
 }

@@ -1,136 +1,163 @@
+// lib/features/auth/services/auth_service.dart
 import 'dart:convert';
-import '../../../core/api/api_client.dart';
-import '../../../core/api/api_endpoints.dart';
-import '../../../core/storage/secure_storage.dart';
-import '../../../models/user.dart';
-import '../../../models/api_response.dart';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_kasir_cerdas_app/core/api/api_client.dart';
+import 'package:flutter_kasir_cerdas_app/core/api/api_endpoints.dart';
+import 'package:flutter_kasir_cerdas_app/core/storage/secure_storage.dart';
+import 'package:flutter_kasir_cerdas_app/models/api_response.dart';
+import 'package:flutter_kasir_cerdas_app/models/user.dart';
 
 class AuthService {
   final ApiClient _apiClient;
   final SecureStorage _secureStorage;
-  
+
   AuthService({ApiClient? apiClient, SecureStorage? secureStorage})
       : _apiClient = apiClient ?? ApiClient(),
         _secureStorage = secureStorage ?? SecureStorage();
-  
-  // Login
-  Future<User> login(String email, String password, bool rememberMe) async {
-    final response = await _apiClient.post(
-      ApiEndpoints.login,
-      isFormData: true,
-      body: {
-        'email': email,
-        'password': password,
-      },
-    );
-    
-    if (response.status) {
-      final token = response.data['token'];
-      final userData = response.data['user'];
-      
-      // Save token and user data
-      await _secureStorage.setToken(token);
-      await _secureStorage.setUserData(jsonEncode(userData));
-      await _secureStorage.setRememberMe(rememberMe);
-      
-      return User.fromJson(userData);
-    } else {
-      throw ApiException(message: response.message);
+
+  // Login method that calls the API and returns the response
+  Future<ApiResponse> login(
+      String email, String password, bool rememberMe) async {
+    try {
+      // Call login API endpoint with form data
+      final response = await _apiClient.post(
+        ApiEndpoints.login,
+        body: {
+          'email': email,
+          'password': password,
+        },
+        isFormData: true,
+      );
+
+      // If successful, save the token and user data to secure storage
+      if (response.status) {
+        final token = response.data?['token'] as String?;
+        if (token != null) {
+          await _secureStorage.setToken(token);
+        }
+
+        final userData = response.data?['user'];
+        if (userData != null) {
+          final userJson = json.encode(userData);
+          await _secureStorage.setUserData(userJson);
+        }
+
+        // Save remember me preference
+        await _secureStorage.setRememberMe(rememberMe);
+      }
+
+      return response;
+    } catch (e) {
+      // Handle errors and rethrow to be caught by the provider
+      rethrow;
     }
   }
-  
-  // Register
-  Future<User> register({
+
+  // Get the current authenticated user from secure storage
+  Future<User?> getCurrentUser() async {
+    try {
+      final userJson = await _secureStorage.getUserData();
+      if (userJson != null && userJson.isNotEmpty) {
+        final userData = json.decode(userJson) as Map<String, dynamic>;
+        return User.fromJson(userData);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting current user: $e');
+      return null;
+    }
+  }
+
+  Future<ApiResponse> register({
     required String name,
     required String email,
     required String password,
     required String passwordConfirmation,
     required String shopName,
     required String shopAddress,
-    required String shopPhone,
+    String? shopPhone,
     String? shopTaxId,
   }) async {
-    final response = await _apiClient.post(
-      ApiEndpoints.register,
-      isFormData: true,
-      body: {
+    try {
+      // Prepare the request body
+      final Map<String, dynamic> body = {
         'name': name,
         'email': email,
         'password': password,
         'password_confirmation': passwordConfirmation,
         'shop_name': shopName,
         'shop_address': shopAddress,
-        'shop_phone': shopPhone,
-        'shop_tax_id': shopTaxId,
-      },
-    );
-    
-    if (response.status) {
-      final token = response.data['token'];
-      final userData = response.data['user'];
-      
-      // Save token and user data
-      await _secureStorage.setToken(token);
-      await _secureStorage.setUserData(jsonEncode(userData));
-      
-      return User.fromJson(userData);
-    } else {
-      throw ApiException(message: response.message);
-    }
-  }
-  
-  // Get current user
-  Future<User?> getCurrentUser() async {
-    try {
-      final userData = await _secureStorage.getUserData();
-      
-      if (userData != null && userData.isNotEmpty) {
-        return User.fromJsonString(userData);
+      };
+
+      // Add optional fields only if they are not null
+      if (shopPhone != null) {
+        body['shop_phone'] = shopPhone;
       }
-      
-      // If we have a token but no cached user data, fetch from API
-      final isAuthenticated = await _secureStorage.isAuthenticated();
-      if (isAuthenticated) {
-        return await fetchCurrentUser();
+
+      if (shopTaxId != null) {
+        body['shop_tax_id'] = shopTaxId;
       }
-      
-      return null;
+
+      // Call register API endpoint with form data
+      final response = await _apiClient.post(
+        ApiEndpoints.register,
+        body: body,
+        isFormData: true,
+      );
+
+      // If successful, save the token and user data to secure storage
+      if (response.status) {
+        final token = response.data?['token'] as String?;
+        if (token != null) {
+          await _secureStorage.setToken(token);
+        }
+
+        final userData = response.data?['user'];
+        if (userData != null) {
+          final userJson = json.encode(userData);
+          await _secureStorage.setUserData(userJson);
+        }
+      }
+
+      return response;
     } catch (e) {
-      return null;
+      // Handle errors and rethrow to be caught by the provider
+      rethrow;
     }
   }
-  
-  // Fetch current user data from API
-  Future<User> fetchCurrentUser() async {
-    final response = await _apiClient.get(ApiEndpoints.currentUser);
-    
-    if (response.status) {
-      final userData = response.data;
-      
-      // Update stored user data
-      await _secureStorage.setUserData(jsonEncode(userData));
-      
-      return User.fromJson(userData);
-    } else {
-      throw ApiException(message: response.message);
-    }
-  }
-  
-  // Logout
-  Future<void> logout() async {
+
+  Future<ApiResponse> logout() async {
     try {
       // Call logout API endpoint
-      await _apiClient.post(ApiEndpoints.logout);
-    } catch (e) {
-      // Ignore errors on logout API call
-    } finally {
-      // Clear local storage regardless of API success
+      final response = await _apiClient.post(ApiEndpoints.logout);
+
+      // Clear storage regardless of API response
       await _secureStorage.clearAll();
+
+      return response;
+    } catch (e) {
+      // Still clear storage even if API call fails
+      await _secureStorage.clearAll();
+
+      // Log error but don't re-throw as logout should succeed locally even if API fails
+      debugPrint('Error during logout API call: $e');
+
+      // Return a success response to indicate local logout was successful
+      return ApiResponse(
+        status: true,
+        message: 'Logged out successfully',
+      );
     }
   }
-  
-  // Check authentication status
+
+  // Check if user is authenticated
   Future<bool> isAuthenticated() async {
     return await _secureStorage.isAuthenticated();
+  }
+
+  // Get remember me preference
+  Future<bool> getRememberMe() async {
+    return await _secureStorage.getRememberMe();
   }
 }

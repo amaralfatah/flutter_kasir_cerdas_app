@@ -1,25 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'app.dart';
+import 'package:flutter_kasir_cerdas_app/features/auth/providers/auth_provider.dart';
+import 'package:flutter_kasir_cerdas_app/features/auth/screens/login_screen.dart';
+import 'package:provider/provider.dart';
 
-void main() async {
-  // Ensure Flutter is initialized
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Set preferred orientations (portrait only)
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  
-  // Set status bar color
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-  );
-  
-  // Run the app
-  runApp(const App());
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        // Add other providers here as needed
+      ],
+      child: MaterialApp(
+        title: 'Kasir Cerdas',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.green,
+            brightness: Brightness.light,
+          ),
+        ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.green,
+            brightness: Brightness.dark,
+          ),
+        ),
+        themeMode: ThemeMode.system,
+        home: const LoginScreen(),
+      ),
+    );
+  }
 }
