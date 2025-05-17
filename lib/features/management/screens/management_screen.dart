@@ -1,9 +1,60 @@
+// lib/features/management/screens/management_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_kasir_cerdas_app/features/management/screens/product_category_screen.dart';
+import 'package:flutter_kasir_cerdas_app/features/product_categories/screens/product_category_screen.dart';
+import 'package:flutter_kasir_cerdas_app/features/products/screens/product_screen.dart';
 import 'package:flutter_kasir_cerdas_app/widgets/app_drawer.dart';
 
 class ManagementScreen extends StatelessWidget {
   const ManagementScreen({super.key});
+
+  // Definisikan menu items langsung di dalam class
+  final List<ManagementMenuItem> _menuItems = const [
+    ManagementMenuItem(
+      title: 'Product or Service',
+      icon: Icons.inventory,
+      route: 'product',
+    ),
+    ManagementMenuItem(
+      title: 'Product Category',
+      icon: Icons.category,
+      route: 'product_category',
+    ),
+    ManagementMenuItem(
+      title: 'Stock Management',
+      icon: Icons.warehouse,
+      route: 'stock',
+    ),
+    ManagementMenuItem(
+      title: 'Customer',
+      icon: Icons.people,
+      route: 'customer',
+    ),
+    ManagementMenuItem(
+      title: 'Credit',
+      icon: Icons.credit_card,
+      route: 'credit',
+    ),
+    ManagementMenuItem(
+      title: 'Purchase of Goods',
+      icon: Icons.shopping_cart,
+      route: 'purchase',
+    ),
+    ManagementMenuItem(
+      title: 'Discounts, Taxes and Fees',
+      icon: Icons.savings,
+      route: 'discounts',
+    ),
+    ManagementMenuItem(
+      title: 'Stock Opname',
+      icon: Icons.list_alt,
+      route: 'stock_opname',
+    ),
+    ManagementMenuItem(
+      title: 'Supplier',
+      icon: Icons.local_shipping,
+      route: 'supplier',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +75,6 @@ class ManagementScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Removed the redundant "Management" title here
                 _buildManagementGrid(context),
               ],
             ),
@@ -35,102 +85,41 @@ class ManagementScreen extends StatelessWidget {
   }
 
   Widget _buildManagementGrid(BuildContext context) {
-    final List<ManagementMenuItem> menuItems = [
-      ManagementMenuItem(
-        title: 'Product or Service',
-        icon: Icons.inventory,
-        onTap: () {
-          _handleMenuItemTap(context, 'Product or Service');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Product Category',
-        icon: Icons.category,
-        onTap: () {
-          _handleMenuItemTap(context, 'Product Category');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Stock Management',
-        icon: Icons.warehouse,
-        onTap: () {
-          _handleMenuItemTap(context, 'Stock Management');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Customer',
-        icon: Icons.people,
-        onTap: () {
-          _handleMenuItemTap(context, 'Customer');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Credit',
-        icon: Icons.credit_card,
-        onTap: () {
-          _handleMenuItemTap(context, 'Credit');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Purchase of Goods',
-        icon: Icons.shopping_cart,
-        onTap: () {
-          _handleMenuItemTap(context, 'Purchase of Goods');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Discounts, Taxes and Fees',
-        icon: Icons.savings,
-        onTap: () {
-          _handleMenuItemTap(context, 'Discounts, Taxes and Fees');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Stock Opname',
-        icon: Icons.list_alt,
-        onTap: () {
-          _handleMenuItemTap(context, 'Stock Opname');
-        },
-      ),
-      ManagementMenuItem(
-        title: 'Supplier',
-        icon: Icons.local_shipping,
-        onTap: () {
-          _handleMenuItemTap(context, 'Supplier');
-        },
-      ),
-    ];
-
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.1, // Decreased to make cards taller
+        childAspectRatio: 1.1,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: menuItems.length,
+      itemCount: _menuItems.length,
       itemBuilder: (context, index) {
-        final item = menuItems[index];
-        return _buildManagementCard(context, item);
+        final item = _menuItems[index];
+        return _buildManagementCard(context, item.title, item.icon,
+            () => _handleMenuItemTap(context, item.route));
       },
     );
   }
 
-  Widget _buildManagementCard(BuildContext context, ManagementMenuItem item) {
+  Widget _buildManagementCard(
+      BuildContext context, String title, IconData icon, VoidCallback onTap) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const borderRadius = 12.0;
+
     return Card(
-      elevation: 0, // Tanpa elevation
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
-            width: 1,
-          ),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        side: BorderSide(
+          color: colorScheme.outlineVariant,
+          width: 1,
         ),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: item.onTap,
+        borderRadius: BorderRadius.circular(borderRadius),
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -140,18 +129,18 @@ class ManagementScreen extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: colorScheme.primaryContainer,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  item.icon,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  icon,
+                  color: colorScheme.onPrimaryContainer,
                   size: 28,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                item.title,
+                title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -166,10 +155,16 @@ class ManagementScreen extends StatelessWidget {
     );
   }
 
-  void _handleMenuItemTap(BuildContext context, String itemName) {
-    // Navigate to the appropriate screen based on the selected menu item
-    switch (itemName) {
-      case 'Product Category':
+  void _handleMenuItemTap(BuildContext context, String route) {
+    // Navigate based on route identifier
+    switch (route) {
+      case 'product':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProductScreen()),
+        );
+        break;
+      case 'product_category':
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -177,10 +172,10 @@ class ManagementScreen extends StatelessWidget {
         );
         break;
       default:
-        // For other menu items that aren't implemented yet, show a snackbar
+        // Untuk menu yang belum diimplementasikan
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$itemName not implemented yet'),
+            content: Text('$route not implemented yet'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -188,14 +183,15 @@ class ManagementScreen extends StatelessWidget {
   }
 }
 
+// Class untuk menu item
 class ManagementMenuItem {
   final String title;
   final IconData icon;
-  final VoidCallback onTap;
+  final String route;
 
-  ManagementMenuItem({
+  const ManagementMenuItem({
     required this.title,
     required this.icon,
-    required this.onTap,
+    required this.route,
   });
 }
