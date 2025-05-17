@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+// lib/models/product_category.dart
+import 'package:flutter/foundation.dart';
 
 class ProductCategory {
   final int id;
@@ -18,25 +19,21 @@ class ProductCategory {
   });
 
   factory ProductCategory.fromJson(Map<String, dynamic> json) {
-    // Handle the case where parent_id might come as a string from the API
+    // Handle parent_id which might be a string or int
     int? parsedParentId;
     if (json['parent_id'] != null) {
       if (json['parent_id'] is int) {
-        parsedParentId = json['parent_id'] as int;
-      } else if (json['parent_id'] is String) {
-        // Try to parse as int if it's a string
-        if (json['parent_id'] != 'null' && json['parent_id'].isNotEmpty) {
-          try {
-            parsedParentId = int.parse(json['parent_id']);
-          } catch (e) {
-            debugPrint(
-                'Error parsing parent_id "${json['parent_id']}" as int: $e');
-          }
+        parsedParentId = json['parent_id'];
+      } else if (json['parent_id'] is String && json['parent_id'] != 'null') {
+        try {
+          parsedParentId = int.parse(json['parent_id']);
+        } catch (e) {
+          debugPrint('Error parsing parent_id: $e');
         }
       }
     }
 
-    // Handle boolean conversion for is_active field
+    // Handle is_active which might be boolean, int, or string
     bool isActive = true;
     if (json['is_active'] != null) {
       if (json['is_active'] is bool) {
@@ -44,8 +41,7 @@ class ProductCategory {
       } else if (json['is_active'] is int) {
         isActive = json['is_active'] == 1;
       } else if (json['is_active'] is String) {
-        isActive = json['is_active'].toLowerCase() == 'true' ||
-            json['is_active'] == '1';
+        isActive = json['is_active'].toLowerCase() == 'true' || json['is_active'] == '1';
       }
     }
 

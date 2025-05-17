@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_kasir_cerdas_app/models/product_category.dart';
 import 'package:provider/provider.dart';
-
-import '../../../models/product_category.dart';
 import '../providers/product_category_provider.dart';
 
 class ProductCategoryScreen extends StatefulWidget {
@@ -16,17 +15,15 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isCreating = false;
   bool _isEditing = false;
-  ProductCategory? _selectedCategory;
+  ProductCategory? _selectedProductCategory;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider =
-          Provider.of<ProductCategoryProvider>(context, listen: false);
-      provider.loadCategories(refresh: true);
-      provider.loadParentCategories();
+      final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
+      provider.loadProductCategories(refresh: true);
     });
   }
 
@@ -39,14 +36,24 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
-      final provider =
-          Provider.of<ProductCategoryProvider>(context, listen: false);
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
       if (provider.hasMorePages && !provider.isLoading) {
-        provider.loadCategories();
+        provider.loadProductCategories();
       }
     }
+  }
+
+  // Method to handle search functionality
+  void _handleSearch(String query) {
+    final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
+    provider.searchProductCategories(query);
+  }
+
+  // Method to clear search
+  void _clearSearch() {
+    _searchController.clear();
+    Provider.of<ProductCategoryProvider>(context, listen: false).resetFilters();
   }
 
   @override
@@ -57,23 +64,20 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
             onPressed: () {
-              final provider =
-                  Provider.of<ProductCategoryProvider>(context, listen: false);
-              provider.loadCategories(refresh: true);
-              provider.loadParentCategories();
+              Provider.of<ProductCategoryProvider>(context, listen: false)
+                  .loadProductCategories(refresh: true);
             },
           ),
         ],
       ),
       body: Consumer<ProductCategoryProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading && provider.categories.isEmpty) {
+          if (provider.isLoading && provider.productCategories.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (provider.error != null && provider.categories.isEmpty) {
+          if (provider.error != null && provider.productCategories.isEmpty) {
             return _buildErrorState(provider);
           }
 
@@ -83,12 +87,11 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    await provider.loadCategories(refresh: true);
-                    await provider.loadParentCategories();
+                    await provider.loadProductCategories(refresh: true);
                   },
-                  child: provider.categories.isEmpty
+                  child: provider.productCategories.isEmpty
                       ? _buildEmptyState()
-                      : _buildCategoryList(provider),
+                      : _buildProductCategoryList(provider),
                 ),
               ),
             ],
@@ -100,11 +103,10 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           setState(() {
             _isCreating = true;
             _isEditing = false;
-            _selectedCategory = null;
+            _selectedProductCategory = null;
           });
-          _showCategoryForm(context);
+          _showProductCategoryForm(context);
         },
-        tooltip: 'Tambah Kategori',
         child: const Icon(Icons.add),
       ),
     );
@@ -115,22 +117,20 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
       padding: const EdgeInsets.all(16.0),
       child: SearchBar(
         controller: _searchController,
-        hintText: 'Cari kategori...',
+        hintText: 'Cari kategori produk...',
         leading: const Icon(Icons.search),
-        padding: const WidgetStatePropertyAll<EdgeInsets>(
+        padding: const MaterialStatePropertyAll<EdgeInsets>(
           EdgeInsets.symmetric(horizontal: 16.0),
         ),
         onChanged: (value) {
-          // Implementasi pencarian di sini
+          // Implement debounce if needed for better performance
+          _handleSearch(value);
         },
         trailing: _searchController.text.isNotEmpty
             ? [
                 IconButton(
                   icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    // Reset hasil pencarian di sini
-                  },
+                  onPressed: _clearSearch,
                 ),
               ]
             : null,
@@ -157,8 +157,7 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           const SizedBox(height: 16),
           FilledButton.tonal(
             onPressed: () {
-              provider.loadCategories(refresh: true);
-              provider.loadParentCategories();
+              provider.loadProductCategories(refresh: true);
             },
             child: const Text('Coba Lagi'),
           ),
@@ -169,19 +168,21 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
 
   Widget _buildEmptyState() {
     final colorScheme = Theme.of(context).colorScheme;
+    final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
+    final isSearching = provider.searchQuery != null && provider.searchQuery!.isNotEmpty;
 
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.category_outlined,
+            isSearching ? Icons.search_off : Icons.category_outlined,
             size: 64,
             color: colorScheme.outline,
           ),
           const SizedBox(height: 16),
           Text(
-            'Tidak ada kategori',
+            isSearching ? 'Tidak ada hasil pencarian' : 'Tidak ada kategori produk',
             style: TextStyle(
               fontSize: 16,
               color: colorScheme.outline,
@@ -189,25 +190,35 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tambah kategori baru dengan menekan tombol + di bawah',
+            isSearching
+                ? 'Coba kata kunci lain atau hapus filter'
+                : 'Tambah kategori produk baru dengan menekan tombol + di bawah',
             style: TextStyle(
               fontSize: 14,
               color: colorScheme.outline.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),
+          if (isSearching)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: FilledButton.tonal(
+                onPressed: _clearSearch,
+                child: const Text('Hapus Pencarian'),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryList(ProductCategoryProvider provider) {
+  Widget _buildProductCategoryList(ProductCategoryProvider provider) {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-      itemCount: provider.categories.length + (provider.hasMorePages ? 1 : 0),
+      itemCount: provider.productCategories.length + (provider.hasMorePages ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index == provider.categories.length) {
+        if (index == provider.productCategories.length) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16.0),
@@ -216,14 +227,13 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           );
         }
 
-        final category = provider.categories[index];
-        return _buildCategoryItem(category, provider);
+        final productCategory = provider.productCategories[index];
+        return _buildProductCategoryItem(productCategory, provider);
       },
     );
   }
 
-  Widget _buildCategoryItem(
-      ProductCategory category, ProductCategoryProvider provider) {
+  Widget _buildProductCategoryItem(ProductCategory productCategory, ProductCategoryProvider provider) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
@@ -241,41 +251,35 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           setState(() {
             _isCreating = false;
             _isEditing = true;
-            _selectedCategory = category;
+            _selectedProductCategory = productCategory;
           });
-          _showCategoryForm(context);
+          _showProductCategoryForm(context);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(4),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: category.isActive
+              backgroundColor: productCategory.isActive
                   ? colorScheme.primaryContainer
                   : colorScheme.surfaceContainerHighest,
               child: Icon(
                 Icons.category,
-                color: category.isActive
+                color: productCategory.isActive
                     ? colorScheme.onPrimaryContainer
                     : colorScheme.onSurfaceVariant,
               ),
             ),
             title: Text(
-              category.name,
+              productCategory.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: category.parentId != null
-                ? _buildParentInfo(category, provider)
+            subtitle: productCategory.parentId != null
+                ? _buildParentInfo(productCategory, provider)
                 : const Text('Kategori Utama'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.delete_outline, color: colorScheme.error),
-                  tooltip: 'Hapus',
-                  onPressed: () => _confirmDelete(context, category),
-                ),
-              ],
+            trailing: IconButton(
+              icon: Icon(Icons.delete_outline, color: colorScheme.error),
+              onPressed: () => _confirmDelete(context, productCategory),
             ),
           ),
         ),
@@ -283,19 +287,19 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     );
   }
 
-  Widget _buildParentInfo(
-      ProductCategory category, ProductCategoryProvider provider) {
-    // Cari dari daftar kategori yang sudah dimuat
-    final parentInList =
-        provider.categories.where((c) => c.id == category.parentId).firstOrNull;
+  Widget _buildParentInfo(ProductCategory productCategory, ProductCategoryProvider provider) {
+    // First try to find the parent in the already loaded categories
+    final parentInList = provider.productCategories
+        .where((c) => c.id == productCategory.parentId)
+        .firstOrNull;
 
     if (parentInList != null) {
       return Text('Parent: ${parentInList.name}');
     }
 
-    // Jika tidak ditemukan, lakukan fetch
+    // If not found, fetch it
     return FutureBuilder<ProductCategory?>(
-      future: provider.getParentCategory(category.parentId),
+      future: provider.getParentCategory(productCategory.parentId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Text('Loading parent...');
@@ -309,12 +313,12 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           return Text('Parent: ${snapshot.data!.name}');
         }
 
-        return Text('Parent ID: ${category.parentId}');
+        return Text('Parent ID: ${productCategory.parentId}');
       },
     );
   }
 
-  void _showCategoryForm(BuildContext context) {
+  void _showProductCategoryForm(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -325,18 +329,18 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            child: _CategoryForm(
+            child: ProductCategoryForm(
               isCreating: _isCreating,
               isEditing: _isEditing,
-              category: _selectedCategory,
-              onSubmit: (category) {
+              category: _selectedProductCategory,
+              onSubmit: (productCategory) {
                 Navigator.pop(context);
                 if (_isCreating) {
                   Provider.of<ProductCategoryProvider>(context, listen: false)
-                      .createCategory(category);
-                } else if (_isEditing && _selectedCategory != null) {
+                      .createCategory(productCategory);
+                } else if (_isEditing && _selectedProductCategory != null) {
                   Provider.of<ProductCategoryProvider>(context, listen: false)
-                      .updateCategory(category);
+                      .updateCategory(productCategory);
                 }
               },
             ),
@@ -346,30 +350,28 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, ProductCategory category) {
-    final colorScheme = Theme.of(context).colorScheme;
-
+  void _confirmDelete(BuildContext context, ProductCategory productCategory) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Hapus Kategori'),
-          content: Text('Yakin ingin menghapus kategori "${category.name}"?'),
+          title: const Text('Hapus Kategori Produk'),
+          content: Text('Yakin ingin menghapus kategori "${productCategory.name}"?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Batal'),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
               onPressed: () {
                 Navigator.pop(context);
                 Provider.of<ProductCategoryProvider>(context, listen: false)
-                    .deleteCategory(category.id);
+                    .deleteCategory(productCategory.id);
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: colorScheme.error,
-                foregroundColor: colorScheme.onError,
-              ),
               child: const Text('Hapus'),
             ),
           ],
@@ -379,13 +381,14 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
   }
 }
 
-class _CategoryForm extends StatefulWidget {
+class ProductCategoryForm extends StatefulWidget {
   final bool isCreating;
   final bool isEditing;
   final ProductCategory? category;
   final Function(ProductCategory) onSubmit;
 
-  const _CategoryForm({
+  const ProductCategoryForm({
+    super.key,
     required this.isCreating,
     required this.isEditing,
     this.category,
@@ -393,15 +396,14 @@ class _CategoryForm extends StatefulWidget {
   });
 
   @override
-  State<_CategoryForm> createState() => _CategoryFormState();
+  State<ProductCategoryForm> createState() => _ProductCategoryFormState();
 }
 
-class _CategoryFormState extends State<_CategoryForm> {
+class _ProductCategoryFormState extends State<ProductCategoryForm> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   int? _parentId;
   bool _isActive = true;
-  ProductCategory? _originalCategory;
 
   @override
   void initState() {
@@ -409,7 +411,6 @@ class _CategoryFormState extends State<_CategoryForm> {
     _nameController = TextEditingController(text: widget.category?.name ?? '');
     _parentId = widget.category?.parentId;
     _isActive = widget.category?.isActive ?? true;
-    _originalCategory = widget.category;
   }
 
   @override
@@ -419,10 +420,8 @@ class _CategoryFormState extends State<_CategoryForm> {
   }
 
   bool _hasChanges() {
-    // If creating a new category, always return true
     if (widget.isCreating) return true;
 
-    // If editing, check if anything changed
     if (widget.category != null) {
       return _nameController.text != widget.category!.name ||
           _parentId != widget.category!.parentId ||
@@ -443,7 +442,7 @@ class _CategoryFormState extends State<_CategoryForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              widget.isCreating ? 'Tambah Kategori' : 'Edit Kategori',
+              widget.isCreating ? 'Tambah Kategori Produk' : 'Edit Kategori Produk',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -453,13 +452,13 @@ class _CategoryFormState extends State<_CategoryForm> {
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Nama Kategori',
+                labelText: 'Nama Kategori Produk',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.category_outlined),
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Nama kategori tidak boleh kosong';
+                  return 'Nama kategori produk tidak boleh kosong';
                 }
                 return null;
               },
@@ -467,7 +466,7 @@ class _CategoryFormState extends State<_CategoryForm> {
             const SizedBox(height: 16),
             Consumer<ProductCategoryProvider>(
               builder: (context, provider, child) {
-                // Siapkan list unik yang tidak memiliki id duplikat
+                // Prepare unique dropdown items
                 final parentItems = [
                   const DropdownMenuItem<int?>(
                     value: null,
@@ -475,38 +474,34 @@ class _CategoryFormState extends State<_CategoryForm> {
                   ),
                 ];
 
-                // Pastikan tidak ada id duplikat di dropdown items
                 final addedIds = <int>{};
-                for (var category in provider.parentCategories) {
-                  // Skip jika category adalah dirinya sendiri atau id sudah ada dalam list
-                  if ((widget.category != null &&
-                          category.id == widget.category!.id) ||
-                      addedIds.contains(category.id)) {
+                for (var productCategory in provider.parentProductCategories) {
+                  // Skip if category is itself or id already in list
+                  if ((widget.category != null && 
+                        productCategory.id == widget.category!.id) ||
+                      addedIds.contains(productCategory.id)) {
                     continue;
                   }
 
-                  addedIds.add(category.id);
+                  addedIds.add(productCategory.id);
                   parentItems.add(
                     DropdownMenuItem<int?>(
-                      value: category.id,
-                      child: Text(category.name),
+                      value: productCategory.id,
+                      child: Text(productCategory.name),
                     ),
                   );
                 }
 
-                // Jika _parentId tidak ada dalam list valid, masih tetap tampilkan
-                // untuk memastikan bahwa user dapat mengubah parent saja
-                if (_parentId != null &&
+                // If parent_id not in valid list, still show it
+                if (_parentId != null && 
                     !addedIds.contains(_parentId) &&
                     _parentId != 0) {
-                  // Tambahkan parent_id ke dropdown dengan nilai placeholder
-                  // Coba dapatkan nama parent dari cache jika ada
                   String parentName = 'Parent ID: $_parentId';
-                  final parentInMap = provider.categories
+                  final parentInList = provider.productCategories
                       .where((c) => c.id == _parentId)
                       .firstOrNull;
-                  if (parentInMap != null) {
-                    parentName = parentInMap.name;
+                  if (parentInList != null) {
+                    parentName = parentInList.name;
                   }
 
                   parentItems.add(
@@ -539,8 +534,8 @@ class _CategoryFormState extends State<_CategoryForm> {
               title: const Text('Status Aktif'),
               subtitle: Text(
                 _isActive
-                    ? 'Kategori aktif dan dapat digunakan'
-                    : 'Kategori tidak aktif',
+                    ? 'Kategori produk aktif dan dapat digunakan'
+                    : 'Kategori produk tidak aktif',
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -564,7 +559,7 @@ class _CategoryFormState extends State<_CategoryForm> {
               const Padding(
                 padding: EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Anda belum melakukan perubahan pada kategori ini',
+                  'Anda belum melakukan perubahan pada kategori produk ini',
                   style: TextStyle(
                     color: Colors.orange,
                     fontStyle: FontStyle.italic,
@@ -585,28 +580,13 @@ class _CategoryFormState extends State<_CategoryForm> {
                   child: FilledButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        // Important: Always include parentId whether it's null or has value
-                        final category = ProductCategory(
+                        final productCategory = ProductCategory(
                           id: widget.category?.id ?? 0,
                           name: _nameController.text.trim(),
-                          parentId: _parentId, // Always include, even if null
+                          parentId: _parentId,
                           isActive: _isActive,
                         );
-
-                        // Log what's changing for debugging
-                        if (widget.isEditing && widget.category != null) {
-                          final changes = <String>[];
-                          if (widget.category!.name != category.name)
-                            changes.add('name');
-                          if (widget.category!.parentId != category.parentId)
-                            changes.add('parent_id');
-                          if (widget.category!.isActive != category.isActive)
-                            changes.add('is_active');
-
-                          debugPrint('Changing fields: ${changes.join(', ')}');
-                        }
-
-                        widget.onSubmit(category);
+                        widget.onSubmit(productCategory);
                       }
                     },
                     child: Text(widget.isCreating ? 'Tambah' : 'Simpan'),

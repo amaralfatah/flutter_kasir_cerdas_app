@@ -1,39 +1,62 @@
 // lib/providers/product_category_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:flutter_kasir_cerdas_app/core/api/api_client.dart';
-
-import '../../../models/product_category.dart';
+import 'package:flutter_kasir_cerdas_app/models/product_category.dart';
 import '../services/product_category_service.dart';
 
 class ProductCategoryProvider with ChangeNotifier {
   final ProductCategoryService _categoryService;
 
   List<ProductCategory> _categories = [];
-  List<ProductCategory> _parentCategories = []; // Tambahkan ini kembali
-  Map<int, ProductCategory> _categoriesMap = {}; // Cache untuk lookup cepat
+  List<ProductCategory> _parentCategories = [];
+  Map<int, ProductCategory> _categoriesMap = {}; // Cache for quick lookups
   bool _isLoading = false;
   String? _error;
+  String? _searchQuery;
+  int? _filterParentId;
+  bool? _filterIsActive;
+  bool _rootOnly = false;
+  String _sortBy = 'name';
+  String _sortDirection = 'asc';
+  
+  // Adding the missing pagination variables
   int _currentPage = 1;
   int _totalPages = 1;
   bool _hasMorePages = false;
   int _totalItems = 0;
-  int _perPage = 15;
 
   ProductCategoryProvider({ProductCategoryService? categoryService})
       : _categoryService = categoryService ?? ProductCategoryService();
 
   // Getters
-  List<ProductCategory> get categories => _categories;
-  List<ProductCategory> get parentCategories => _parentCategories;
+  List<ProductCategory> get productCategories => _categories;
+  List<ProductCategory> get parentProductCategories => _parentCategories;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String? get searchQuery => _searchQuery;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   bool get hasMorePages => _hasMorePages;
   int get totalItems => _totalItems;
 
+  // Set search query and reload categories
+  Future<void> searchProductCategories(String query) async {
+    _searchQuery = query.isNotEmpty ? query : null;
+    await loadProductCategories(refresh: true);
+  }
+
+  // Reset all filters and search
+  Future<void> resetFilters() async {
+    _searchQuery = null;
+    _filterParentId = null;
+    _filterIsActive = null;
+    _rootOnly = false;
+    _sortBy = 'name';
+    _sortDirection = 'asc';
+    await loadProductCategories(refresh: true);
+  }
+
   // Load categories with pagination
-  Future<void> loadCategories({bool refresh = false}) async {
+  Future<void> loadProductCategories({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
       _categories = [];
@@ -46,7 +69,15 @@ class ProductCategoryProvider with ChangeNotifier {
     _error = null;
 
     try {
-      final result = await _categoryService.getCategories(page: _currentPage);
+      final result = await _categoryService.getCategories(
+        page: _currentPage,
+        search: _searchQuery,
+        parentId: _filterParentId,
+        isActive: _filterIsActive,
+        rootOnly: _rootOnly,
+        sortBy: _sortBy,
+        sortDirection: _sortDirection,
+      );
 
       final List<ProductCategory> newCategories = result['categories'];
       final Map<String, dynamic> pagination = result['pagination'];
@@ -66,16 +97,15 @@ class ProductCategoryProvider with ChangeNotifier {
       _currentPage = pagination['current_page'] ?? _currentPage;
       _totalPages = pagination['last_page'] ?? _totalPages;
       _totalItems = pagination['total'] ?? _totalItems;
-      _perPage = pagination['per_page'] ?? _perPage;
       _hasMorePages = pagination['has_more'] ?? false;
 
       if (_hasMorePages) {
         _currentPage++;
       }
 
-      // Jika kita melakukan refresh, maka perbarui juga parent categories
+      // If refreshing, also update parent categories
       if (refresh) {
-        await loadParentCategories();
+        await loadParentProductCategories();
       }
 
       notifyListeners();
@@ -87,34 +117,29 @@ class ProductCategoryProvider with ChangeNotifier {
     }
   }
 
-  // Load parent categories - menambahkan kembali metode ini
-  Future<void> loadParentCategories() async {
+  // Load parent categories
+  Future<void> loadParentProductCategories() async {
     if (_isLoading) return;
 
-    _setLoading(true);
-    _error = null;
-
     try {
-      // Pertama coba filter dari list yang sudah ada
-      final mainCategories =
-          _categories.where((c) => c.parentId == null).toList();
+      // First try filtering from the existing list
+      final mainCategories = _categories.where((c) => c.parentId == null).toList();
 
-      // Jika sudah ada parent categories, gunakan saja
+      // If we already have parent categories, use them
       if (mainCategories.isNotEmpty) {
         _parentCategories = mainCategories;
         notifyListeners();
-        _setLoading(false);
         return;
       }
 
-      // Jika belum ada, fetch dari API
-      final result = await _categoryService.getCategories();
+      // If we don't have any, fetch from the API
+      _setLoading(true);
+      final result = await _categoryService.getCategories(rootOnly: true);
       final List<ProductCategory> allCategories = result['categories'];
 
-      _parentCategories =
-          allCategories.where((category) => category.parentId == null).toList();
+      _parentCategories = allCategories.where((c) => c.parentId == null).toList();
 
-      // Update cache juga
+      // Update cache
       for (var category in allCategories) {
         _categoriesMap[category.id] = category;
       }
@@ -128,21 +153,21 @@ class ProductCategoryProvider with ChangeNotifier {
     }
   }
 
-  // Get category by ID - efisien dengan cache
+  // Get category by ID (efficiently using cache)
   Future<ProductCategory?> getCategoryById(int id) async {
-    // Cek cache terlebih dahulu
+    // Check cache first
     if (_categoriesMap.containsKey(id)) {
       return _categoriesMap[id];
     }
 
-    // Cek di list yang sudah di-load
+    // Check loaded list
     final cachedCategory = _categories.where((c) => c.id == id).firstOrNull;
     if (cachedCategory != null) {
       _categoriesMap[id] = cachedCategory;
       return cachedCategory;
     }
 
-    // Jika tidak ada di cache, baru fetch dari API
+    // If not in cache, fetch from API
     try {
       final category = await _categoryService.getCategoryById(id);
       if (category != null) {
@@ -155,7 +180,7 @@ class ProductCategoryProvider with ChangeNotifier {
     }
   }
 
-  // Get parent category - dengan handling null safety yang baik
+  // Get parent category
   Future<ProductCategory?> getParentCategory(int? parentId) async {
     if (parentId == null) return null;
     return await getCategoryById(parentId);
@@ -171,7 +196,7 @@ class ProductCategoryProvider with ChangeNotifier {
       _categories.add(newCategory);
       _categoriesMap[newCategory.id] = newCategory;
 
-      // Jika category baru adalah parent category, tambahkan ke list parent
+      // If the new category is a parent category, add it to the parent list
       if (newCategory.parentId == null) {
         _parentCategories.add(newCategory);
       }
@@ -187,41 +212,28 @@ class ProductCategoryProvider with ChangeNotifier {
     }
   }
 
+  // Update an existing category
   Future<bool> updateCategory(ProductCategory category) async {
     _setLoading(true);
     _error = null;
 
     try {
-      // Get the original category from our cache to track changes
-      ProductCategory? originalCategory;
-      final index = _categories.indexWhere((c) => c.id == category.id);
-      if (index != -1) {
-        originalCategory = _categories[index];
-      } else {
-        originalCategory = _categoriesMap[category.id];
-      }
-
-      // Always send both the original (for comparison) and the updated category
-      final updatedCategory = await _categoryService.updateCategory(category,
-          original: originalCategory);
+      final updatedCategory = await _categoryService.updateCategory(category);
 
       // Update in categories list
+      final index = _categories.indexWhere((c) => c.id == category.id);
       if (index != -1) {
         _categories[index] = updatedCategory;
       } else {
-        // If not found in main list but exists in map, we need to add it to the list
-        if (_categoriesMap.containsKey(updatedCategory.id)) {
-          _categories.add(updatedCategory);
-        }
+        _categories.add(updatedCategory);
       }
 
       // Update in cache
       _categoriesMap[updatedCategory.id] = updatedCategory;
 
-      // Update in parent categories list if applicable
+      // Update in parent categories if applicable
       if (updatedCategory.parentId == null) {
-        final parentIndex =
-            _parentCategories.indexWhere((c) => c.id == updatedCategory.id);
+        final parentIndex = _parentCategories.indexWhere((c) => c.id == updatedCategory.id);
         if (parentIndex != -1) {
           _parentCategories[parentIndex] = updatedCategory;
         } else {
@@ -235,51 +247,12 @@ class ProductCategoryProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      if (e is ApiException && e.statusCode == 422) {
-        // For validation errors, provide a more user-friendly message
-        _error = "Validation Error: Please check your category data";
-
-        // Extract specific field errors if available
-        if (e.data != null && e.data!.containsKey('errors')) {
-          final errors = e.data!['errors'];
-          if (errors is Map<String, dynamic>) {
-            final messages = <String>[];
-            errors.forEach((field, fieldErrors) {
-              if (fieldErrors is List) {
-                messages.add(
-                    '${_formatFieldName(field)}: ${fieldErrors.join(', ')}');
-              } else if (fieldErrors is String) {
-                messages.add('${_formatFieldName(field)}: $fieldErrors');
-              }
-            });
-            if (messages.isNotEmpty) {
-              _error = messages.join('\n');
-            }
-          }
-        }
-      } else {
-        _error = e.toString();
-      }
-
+      _error = e.toString();
       debugPrint('Error updating category: $_error');
       return false;
     } finally {
       _setLoading(false);
     }
-  }
-
-// Helper method to format field names for error messages
-  String _formatFieldName(String field) {
-    // Convert snake_case or camelCase to Title Case with spaces
-    return field
-        .replaceAll('_', ' ')
-        .replaceAllMapped(RegExp(r'[A-Z]'), (match) => ' ${match.group(0)}')
-        .trim()
-        .split(' ')
-        .map((word) => word.isNotEmpty
-            ? '${word[0].toUpperCase()}${word.substring(1)}'
-            : '')
-        .join(' ');
   }
 
   // Delete a category
@@ -291,8 +264,8 @@ class ProductCategoryProvider with ChangeNotifier {
       final success = await _categoryService.deleteCategory(id);
 
       if (success) {
-        _categories.removeWhere((category) => category.id == id);
-        _parentCategories.removeWhere((category) => category.id == id);
+        _categories.removeWhere((c) => c.id == id);
+        _parentCategories.removeWhere((c) => c.id == id);
         _categoriesMap.remove(id);
         notifyListeners();
       }
