@@ -120,12 +120,14 @@ class ManagementScreen extends StatelessWidget {
 
   Widget _buildManagementCard(BuildContext context, ManagementMenuItem item) {
     return Card(
-      elevation: 2,
-      surfaceTintColor: Theme.of(context).colorScheme.surfaceTint,
-      shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.circular(16), // Material 3 uses more rounded corners
-      ),
+      elevation: 0, // Tanpa elevation
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: item.onTap,
@@ -138,7 +140,7 @@ class ManagementScreen extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -170,7 +172,8 @@ class ManagementScreen extends StatelessWidget {
       case 'Product Category':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ProductCategoryScreen()),
+          MaterialPageRoute(
+              builder: (context) => const ProductCategoryScreen()),
         );
         break;
       default:

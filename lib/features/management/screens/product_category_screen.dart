@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_kasir_cerdas_app/models/product_category.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/product_category_provider.dart';
 
 class ProductCategoryScreen extends StatefulWidget {
@@ -22,7 +23,8 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
+      final provider =
+          Provider.of<ProductCategoryProvider>(context, listen: false);
       provider.loadProductCategories(refresh: true);
     });
   }
@@ -36,8 +38,10 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
-      final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      final provider =
+          Provider.of<ProductCategoryProvider>(context, listen: false);
       if (provider.hasMorePages && !provider.isLoading) {
         provider.loadProductCategories();
       }
@@ -46,7 +50,8 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
 
   // Method to handle search functionality
   void _handleSearch(String query) {
-    final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
+    final provider =
+        Provider.of<ProductCategoryProvider>(context, listen: false);
     provider.searchProductCategories(query);
   }
 
@@ -119,7 +124,7 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
         controller: _searchController,
         hintText: 'Cari kategori produk...',
         leading: const Icon(Icons.search),
-        padding: const MaterialStatePropertyAll<EdgeInsets>(
+        padding: const WidgetStatePropertyAll<EdgeInsets>(
           EdgeInsets.symmetric(horizontal: 16.0),
         ),
         onChanged: (value) {
@@ -168,8 +173,10 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
 
   Widget _buildEmptyState() {
     final colorScheme = Theme.of(context).colorScheme;
-    final provider = Provider.of<ProductCategoryProvider>(context, listen: false);
-    final isSearching = provider.searchQuery != null && provider.searchQuery!.isNotEmpty;
+    final provider =
+        Provider.of<ProductCategoryProvider>(context, listen: false);
+    final isSearching =
+        provider.searchQuery != null && provider.searchQuery!.isNotEmpty;
 
     return Center(
       child: Column(
@@ -182,7 +189,9 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            isSearching ? 'Tidak ada hasil pencarian' : 'Tidak ada kategori produk',
+            isSearching
+                ? 'Tidak ada hasil pencarian'
+                : 'Tidak ada kategori produk',
             style: TextStyle(
               fontSize: 16,
               color: colorScheme.outline,
@@ -216,7 +225,8 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-      itemCount: provider.productCategories.length + (provider.hasMorePages ? 1 : 0),
+      itemCount:
+          provider.productCategories.length + (provider.hasMorePages ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == provider.productCategories.length) {
           return const Center(
@@ -233,16 +243,17 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     );
   }
 
-  Widget _buildProductCategoryItem(ProductCategory productCategory, ProductCategoryProvider provider) {
+  Widget _buildProductCategoryItem(
+      ProductCategory productCategory, ProductCategoryProvider provider) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0,
+      elevation: 0, // Tanpa elevation
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: colorScheme.outlineVariant.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outlineVariant,
           width: 1,
         ),
       ),
@@ -287,7 +298,8 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     );
   }
 
-  Widget _buildParentInfo(ProductCategory productCategory, ProductCategoryProvider provider) {
+  Widget _buildParentInfo(
+      ProductCategory productCategory, ProductCategoryProvider provider) {
     // First try to find the parent in the already loaded categories
     final parentInList = provider.productCategories
         .where((c) => c.id == productCategory.parentId)
@@ -356,7 +368,8 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Hapus Kategori Produk'),
-          content: Text('Yakin ingin menghapus kategori "${productCategory.name}"?'),
+          content:
+              Text('Yakin ingin menghapus kategori "${productCategory.name}"?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -442,7 +455,9 @@ class _ProductCategoryFormState extends State<ProductCategoryForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              widget.isCreating ? 'Tambah Kategori Produk' : 'Edit Kategori Produk',
+              widget.isCreating
+                  ? 'Tambah Kategori Produk'
+                  : 'Edit Kategori Produk',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -477,8 +492,8 @@ class _ProductCategoryFormState extends State<ProductCategoryForm> {
                 final addedIds = <int>{};
                 for (var productCategory in provider.parentProductCategories) {
                   // Skip if category is itself or id already in list
-                  if ((widget.category != null && 
-                        productCategory.id == widget.category!.id) ||
+                  if ((widget.category != null &&
+                          productCategory.id == widget.category!.id) ||
                       addedIds.contains(productCategory.id)) {
                     continue;
                   }
@@ -493,7 +508,7 @@ class _ProductCategoryFormState extends State<ProductCategoryForm> {
                 }
 
                 // If parent_id not in valid list, still show it
-                if (_parentId != null && 
+                if (_parentId != null &&
                     !addedIds.contains(_parentId) &&
                     _parentId != 0) {
                   String parentName = 'Parent ID: $_parentId';

@@ -48,10 +48,10 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildWelcomeSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Card(
       elevation: 0,
       color: colorScheme.primaryContainer,
@@ -84,8 +84,8 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       'John Doe',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
@@ -137,7 +137,7 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildQuickActionButton({
     required BuildContext context,
     required IconData icon,
@@ -145,7 +145,7 @@ class HomeScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -168,7 +168,7 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildFeaturedSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +210,7 @@ class HomeScreen extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildFeaturedCard({
     required BuildContext context,
     required String title,
@@ -222,11 +222,12 @@ class HomeScreen extends StatelessWidget {
       width: 200,
       margin: const EdgeInsets.only(right: 16),
       child: Card(
-        elevation: 0,
+        elevation: 0, // Tanpa elevation
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
             color: Theme.of(context).colorScheme.outlineVariant,
+            width: 1,
           ),
         ),
         child: Padding(
@@ -243,8 +244,8 @@ class HomeScreen extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -259,7 +260,7 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildRecentActivitySection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +294,7 @@ class HomeScreen extends StatelessWidget {
       ],
     );
   }
-  
+
   Widget _buildActivityItem({
     required BuildContext context,
     required String title,
@@ -303,13 +304,14 @@ class HomeScreen extends StatelessWidget {
   }) {
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: Theme.of(context).colorScheme.outlineVariant,
+          width: 1,
         ),
       ),
+      margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.2),
