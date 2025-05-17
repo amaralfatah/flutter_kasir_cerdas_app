@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_kasir_cerdas_app/features/auth/providers/auth_provider.dart';
-import 'package:flutter_kasir_cerdas_app/features/auth/screens/login_screen.dart';
+import 'package:flutter_kasir_cerdas_app/features/auth/screens/splash_screen.dart';
 import 'package:flutter_kasir_cerdas_app/features/management/providers/product_category_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         themeMode: ThemeMode.system,
-        home: const LoginScreen(),
+        home: const SplashScreen(), // Gunakan SplashScreen sebagai rute awal
       ),
     );
   }

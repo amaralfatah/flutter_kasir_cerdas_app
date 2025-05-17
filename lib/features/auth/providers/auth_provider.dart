@@ -154,6 +154,46 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Di class AuthProvider, tambahkan metode ini
+  Future<void> initializeAuth() async {
+    if (_status == AuthStatus.initial) {
+      try {
+        final isAuth = await _authService.isAuthenticated();
+        _rememberMe = await _authService.getRememberMe();
+
+        if (isAuth) {
+          debugPrint('Token ditemukan, mencoba mendapatkan data user...');
+          final user = await _authService.getCurrentUser();
+
+          if (user != null) {
+            _user = user;
+            _status = AuthStatus.authenticated;
+            debugPrint('User berhasil diambil: ${user.name}');
+          } else {
+            // Token ada tapi gagal mendapatkan user, mungkin token sudah tidak valid
+            debugPrint('Token ada tapi gagal mendapatkan user');
+            _status = AuthStatus.unauthenticated;
+            await _authService.clearStorage(); // Hapus token yang tidak valid
+          }
+        } else {
+          debugPrint('Tidak ada token tersimpan');
+          _status = AuthStatus.unauthenticated;
+        }
+      } catch (e) {
+        debugPrint('Error saat memeriksa status autentikasi: $e');
+        _status = AuthStatus.unauthenticated;
+        await _authService.clearStorage(); // Hapus token jika ada error
+      }
+
+      notifyListeners();
+    }
+
+    // Tunggu sampai status tidak initial lagi
+    while (_status == AuthStatus.initial) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+  }
+
   // Reset error message
   void resetError() {
     _errorMessage = '';

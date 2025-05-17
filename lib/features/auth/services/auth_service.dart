@@ -151,9 +151,29 @@ class AuthService {
     }
   }
 
-  // Check if user is authenticated
+  // Di class AuthService, tambahkan/modifikasi metode ini
   Future<bool> isAuthenticated() async {
-    return await _secureStorage.isAuthenticated();
+    try {
+      final token = await _secureStorage.getToken();
+
+      if (token.isEmpty) {
+        return false;
+      }
+
+      // Opsional: Validasi token dengan API
+      // Bila Anda memiliki endpoint untuk validasi token
+      // Contoh: panggil /api/auth/validate-token atau sejenisnya
+
+      return true;
+    } catch (e) {
+      debugPrint('Error checking authentication: $e');
+      return false;
+    }
+  }
+
+// Tambahkan metode baru untuk membersihkan storage
+  Future<void> clearStorage() async {
+    await _secureStorage.clearAll();
   }
 
   // Get remember me preference
