@@ -139,18 +139,31 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> logout() async {
     try {
-      await _authService.logout();
+      debugPrint('AuthProvider: Starting logout process');
+      _status = AuthStatus.unauthenticated; // Set status segera
+
+      // Panggil API logout (tapi jangan tunggu hasilnya untuk melanjutkan)
+      _authService.logout().then((_) {
+        debugPrint('AuthProvider: API logout completed');
+      }).catchError((e) {
+        debugPrint('AuthProvider: API logout error: $e');
+      });
+
+      // Langsung hapus data lokal tanpa menunggu API
+      debugPrint('AuthProvider: Clearing local storage');
+      await _authService.clearStorage();
+
       _user = null;
-      _status = AuthStatus.unauthenticated;
+      debugPrint('AuthProvider: Logout completed successfully');
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Error during logout: $e');
-      // Still consider logout successful even if there's an error
+      debugPrint('AuthProvider: Error during logout: $e');
+      // Pastikan status tetap diubah meskipun ada error
       _user = null;
       _status = AuthStatus.unauthenticated;
       notifyListeners();
-      return true;
+      return true; // Tetap kembalikan true agar UI berpindah
     }
   }
 

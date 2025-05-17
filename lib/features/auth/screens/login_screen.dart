@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Logo or App Title
                   Icon(
-                    Icons.flutter_dash,
+                    Icons.point_of_sale,
                     size: 80,
                     color: colorScheme.primary,
                   ),
