@@ -1,7 +1,10 @@
+// lib/features/product_categories/screens/product_category_screen.dart - Fixed version
 import 'package:flutter/material.dart';
-import 'package:flutter_kasir_cerdas_app/models/product_category.dart';
+import 'package:flutter_kasir_cerdas_app/features/product_categories/widgets/product_category_card.dart';
+import 'package:flutter_kasir_cerdas_app/features/product_categories/widgets/product_category_form.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/product_category.dart';
 import '../providers/product_category_provider.dart';
 
 class ProductCategoryScreen extends StatefulWidget {
@@ -61,11 +64,37 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     Provider.of<ProductCategoryProvider>(context, listen: false).resetFilters();
   }
 
+  void _showCreateForm() {
+    setState(() {
+      _isCreating = true;
+      _isEditing = false;
+      _selectedProductCategory = null;
+    });
+    _showProductCategoryForm(context);
+  }
+
+  void _showEditForm(ProductCategory category) {
+    setState(() {
+      _isCreating = false;
+      _isEditing = true;
+      _selectedProductCategory = category;
+    });
+    _showProductCategoryForm(context);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Kategori Produk'),
+        centerTitle: true,
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 2,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -79,7 +108,9 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
       body: Consumer<ProductCategoryProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && provider.productCategories.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
+            );
           }
 
           if (provider.error != null && provider.productCategories.isEmpty) {
@@ -96,7 +127,7 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
                   },
                   child: provider.productCategories.isEmpty
                       ? _buildEmptyState()
-                      : _buildProductCategoryList(provider),
+                      : _buildCategoryList(),
                 ),
               ),
             ],
@@ -104,20 +135,18 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _isCreating = true;
-            _isEditing = false;
-            _selectedProductCategory = null;
-          });
-          _showProductCategoryForm(context);
-        },
+        onPressed: _showCreateForm,
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
+        elevation: 3,
         child: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _buildSearchBar() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SearchBar(
@@ -128,7 +157,7 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           EdgeInsets.symmetric(horizontal: 16.0),
         ),
         onChanged: (value) {
-          // Implement debounce if needed for better performance
+          // Search happens as you type - original behavior
           _handleSearch(value);
         },
         trailing: _searchController.text.isNotEmpty
@@ -139,28 +168,37 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
                 ),
               ]
             : null,
+        // MD3 styling
+        elevation: const WidgetStatePropertyAll(0),
+        backgroundColor: WidgetStatePropertyAll(
+            colorScheme.surfaceContainerHighest.withOpacity(0.3)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildErrorState(ProductCategoryProvider provider) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
+          Icon(Icons.error_outline, size: 48, color: colorScheme.error),
           const SizedBox(height: 16),
           Text(
             'Error: ${provider.error}',
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.error,
+                ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-          FilledButton.tonal(
+          FilledButton(
             onPressed: () {
               provider.loadProductCategories(refresh: true);
             },
@@ -185,28 +223,29 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           Icon(
             isSearching ? Icons.search_off : Icons.category_outlined,
             size: 64,
-            color: colorScheme.outline,
+            color: colorScheme.onSurfaceVariant.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
             isSearching
                 ? 'Tidak ada hasil pencarian'
                 : 'Tidak ada kategori produk',
-            style: TextStyle(
-              fontSize: 16,
-              color: colorScheme.outline,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 8),
-          Text(
-            isSearching
-                ? 'Coba kata kunci lain atau hapus filter'
-                : 'Tambah kategori produk baru dengan menekan tombol + di bawah',
-            style: TextStyle(
-              fontSize: 14,
-              color: colorScheme.outline.withOpacity(0.8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              isSearching
+                  ? 'Coba kata kunci lain atau hapus filter'
+                  : 'Tambah kategori produk baru dengan menekan tombol + di bawah',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                  ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           if (isSearching)
             Padding(
@@ -221,7 +260,9 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     );
   }
 
-  Widget _buildProductCategoryList(ProductCategoryProvider provider) {
+  Widget _buildCategoryList() {
+    final provider = Provider.of<ProductCategoryProvider>(context);
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
@@ -237,95 +278,12 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
           );
         }
 
-        final productCategory = provider.productCategories[index];
-        return _buildProductCategoryItem(productCategory, provider);
-      },
-    );
-  }
-
-  Widget _buildProductCategoryItem(
-      ProductCategory productCategory, ProductCategoryProvider provider) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0, // Tanpa elevation
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant,
-          width: 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _isCreating = false;
-            _isEditing = true;
-            _selectedProductCategory = productCategory;
-          });
-          _showProductCategoryForm(context);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: productCategory.isActive
-                  ? colorScheme.primaryContainer
-                  : colorScheme.surfaceContainerHighest,
-              child: Icon(
-                Icons.category,
-                color: productCategory.isActive
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurfaceVariant,
-              ),
-            ),
-            title: Text(
-              productCategory.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: productCategory.parentId != null
-                ? _buildParentInfo(productCategory, provider)
-                : const Text('Kategori Utama'),
-            trailing: IconButton(
-              icon: Icon(Icons.delete_outline, color: colorScheme.error),
-              onPressed: () => _confirmDelete(context, productCategory),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildParentInfo(
-      ProductCategory productCategory, ProductCategoryProvider provider) {
-    // First try to find the parent in the already loaded categories
-    final parentInList = provider.productCategories
-        .where((c) => c.id == productCategory.parentId)
-        .firstOrNull;
-
-    if (parentInList != null) {
-      return Text('Parent: ${parentInList.name}');
-    }
-
-    // If not found, fetch it
-    return FutureBuilder<ProductCategory?>(
-      future: provider.getParentCategory(productCategory.parentId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text('Loading parent...');
-        }
-
-        if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
-        }
-
-        if (snapshot.hasData && snapshot.data != null) {
-          return Text('Parent: ${snapshot.data!.name}');
-        }
-
-        return Text('Parent ID: ${productCategory.parentId}');
+        final category = provider.productCategories[index];
+        return ProductCategoryCard(
+          category: category,
+          onTap: () => _showEditForm(category),
+          onDelete: () => _confirmDelete(context, category),
+        );
       },
     );
   }
@@ -345,14 +303,14 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
               isCreating: _isCreating,
               isEditing: _isEditing,
               category: _selectedProductCategory,
-              onSubmit: (productCategory) {
+              onSubmit: (category) {
                 Navigator.pop(context);
                 if (_isCreating) {
                   Provider.of<ProductCategoryProvider>(context, listen: false)
-                      .createCategory(productCategory);
+                      .createCategory(category);
                 } else if (_isEditing && _selectedProductCategory != null) {
                   Provider.of<ProductCategoryProvider>(context, listen: false)
-                      .updateCategory(productCategory);
+                      .updateCategory(category);
                 }
               },
             ),
@@ -362,14 +320,15 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, ProductCategory productCategory) {
+  void _confirmDelete(BuildContext context, ProductCategory category) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Hapus Kategori Produk'),
-          content:
-              Text('Yakin ingin menghapus kategori "${productCategory.name}"?'),
+          content: Text('Yakin ingin menghapus kategori "${category.name}"?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -377,241 +336,19 @@ class _ProductCategoryScreenState extends State<ProductCategoryScreen> {
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
-                foregroundColor: Theme.of(context).colorScheme.onError,
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
               ),
               onPressed: () {
                 Navigator.pop(context);
                 Provider.of<ProductCategoryProvider>(context, listen: false)
-                    .deleteCategory(productCategory.id);
+                    .deleteCategory(category.id);
               },
               child: const Text('Hapus'),
             ),
           ],
         );
       },
-    );
-  }
-}
-
-class ProductCategoryForm extends StatefulWidget {
-  final bool isCreating;
-  final bool isEditing;
-  final ProductCategory? category;
-  final Function(ProductCategory) onSubmit;
-
-  const ProductCategoryForm({
-    super.key,
-    required this.isCreating,
-    required this.isEditing,
-    this.category,
-    required this.onSubmit,
-  });
-
-  @override
-  State<ProductCategoryForm> createState() => _ProductCategoryFormState();
-}
-
-class _ProductCategoryFormState extends State<ProductCategoryForm> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  int? _parentId;
-  bool _isActive = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.category?.name ?? '');
-    _parentId = widget.category?.parentId;
-    _isActive = widget.category?.isActive ?? true;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  bool _hasChanges() {
-    if (widget.isCreating) return true;
-
-    if (widget.category != null) {
-      return _nameController.text != widget.category!.name ||
-          _parentId != widget.category!.parentId ||
-          _isActive != widget.category!.isActive;
-    }
-
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.isCreating
-                  ? 'Tambah Kategori Produk'
-                  : 'Edit Kategori Produk',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nama Kategori Produk',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.category_outlined),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Nama kategori produk tidak boleh kosong';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            Consumer<ProductCategoryProvider>(
-              builder: (context, provider, child) {
-                // Prepare unique dropdown items
-                final parentItems = [
-                  const DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text('Tidak Ada'),
-                  ),
-                ];
-
-                final addedIds = <int>{};
-                for (var productCategory in provider.parentProductCategories) {
-                  // Skip if category is itself or id already in list
-                  if ((widget.category != null &&
-                          productCategory.id == widget.category!.id) ||
-                      addedIds.contains(productCategory.id)) {
-                    continue;
-                  }
-
-                  addedIds.add(productCategory.id);
-                  parentItems.add(
-                    DropdownMenuItem<int?>(
-                      value: productCategory.id,
-                      child: Text(productCategory.name),
-                    ),
-                  );
-                }
-
-                // If parent_id not in valid list, still show it
-                if (_parentId != null &&
-                    !addedIds.contains(_parentId) &&
-                    _parentId != 0) {
-                  String parentName = 'Parent ID: $_parentId';
-                  final parentInList = provider.productCategories
-                      .where((c) => c.id == _parentId)
-                      .firstOrNull;
-                  if (parentInList != null) {
-                    parentName = parentInList.name;
-                  }
-
-                  parentItems.add(
-                    DropdownMenuItem<int?>(
-                      value: _parentId,
-                      child: Text(parentName),
-                    ),
-                  );
-                }
-
-                return DropdownButtonFormField<int?>(
-                  decoration: const InputDecoration(
-                    labelText: 'Kategori Induk (Opsional)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.account_tree_outlined),
-                  ),
-                  value: _parentId,
-                  hint: const Text('Pilih Kategori Induk'),
-                  items: parentItems,
-                  onChanged: (value) {
-                    setState(() {
-                      _parentId = value;
-                    });
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Status Aktif'),
-              subtitle: Text(
-                _isActive
-                    ? 'Kategori produk aktif dan dapat digunakan'
-                    : 'Kategori produk tidak aktif',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              value: _isActive,
-              onChanged: (value) {
-                setState(() {
-                  _isActive = value;
-                });
-              },
-              secondary: Icon(
-                _isActive ? Icons.check_circle_outline : Icons.cancel_outlined,
-                color: _isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.error,
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (widget.isEditing && !_hasChanges())
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Text(
-                  'Anda belum melakukan perubahan pada kategori produk ini',
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Batal'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        final productCategory = ProductCategory(
-                          id: widget.category?.id ?? 0,
-                          name: _nameController.text.trim(),
-                          parentId: _parentId,
-                          isActive: _isActive,
-                        );
-                        widget.onSubmit(productCategory);
-                      }
-                    },
-                    child: Text(widget.isCreating ? 'Tambah' : 'Simpan'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

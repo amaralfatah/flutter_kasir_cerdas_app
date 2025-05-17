@@ -36,7 +36,7 @@ class ProductCard extends StatelessWidget {
       color: colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.2)),
+        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5)),
       ),
       child: InkWell(
         onTap: onTap,

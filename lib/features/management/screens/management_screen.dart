@@ -61,11 +61,13 @@ class ManagementScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Management'),
+        centerTitle: true,
         backgroundColor: colorScheme.surface,
         elevation: 0,
-        scrolledUnderElevation: 2, // Material 3 scrolled elevation
+        scrolledUnderElevation: 2,
       ),
       drawer: const AppDrawer(currentPage: 'management'),
       body: SafeArea(
@@ -75,6 +77,16 @@ class ManagementScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Optional section title
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 16),
+                  child: Text(
+                    'Menu Manajemen',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
                 _buildManagementGrid(context),
               ],
             ),
@@ -91,8 +103,8 @@ class ManagementScreen extends StatelessWidget {
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 1.1,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
       itemCount: _menuItems.length,
       itemBuilder: (context, index) {
@@ -106,17 +118,18 @@ class ManagementScreen extends StatelessWidget {
   Widget _buildManagementCard(
       BuildContext context, String title, IconData icon, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
-    const borderRadius = 12.0;
+    const borderRadius = 16.0;
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
         side: BorderSide(
-          color: colorScheme.outlineVariant,
+          color: colorScheme.outlineVariant.withOpacity(0.5),
           width: 1,
         ),
       ),
+      color: colorScheme.surface,
       child: InkWell(
         borderRadius: BorderRadius.circular(borderRadius),
         onTap: onTap,
@@ -126,11 +139,11 @@ class ManagementScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
@@ -172,11 +185,12 @@ class ManagementScreen extends StatelessWidget {
         );
         break;
       default:
-        // Untuk menu yang belum diimplementasikan
+        // For unimplemented menu items
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$route not implemented yet'),
             behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.secondary,
           ),
         );
     }

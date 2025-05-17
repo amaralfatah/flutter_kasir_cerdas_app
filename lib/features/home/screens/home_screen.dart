@@ -6,15 +6,26 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Home'),
+        centerTitle: true,
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 2,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications tapped')),
+                SnackBar(
+                  content: const Text('Notifications tapped'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: colorScheme.secondary,
+                ),
               );
             },
           ),
@@ -23,14 +34,14 @@ class HomeScreen extends StatelessWidget {
       drawer: const AppDrawer(currentPage: 'home'),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildWelcomeSection(context),
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
               _buildFeaturedSection(context),
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
               _buildRecentActivitySection(context),
             ],
           ),
@@ -44,6 +55,9 @@ class HomeScreen extends StatelessWidget {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         },
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
+        elevation: 3,
         child: const Icon(Icons.person),
       ),
     );
@@ -51,6 +65,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildWelcomeSection(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Card(
       elevation: 0,
@@ -65,12 +80,17 @@ class HomeScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: colorScheme.primary,
-                  child: const Icon(
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
                     Icons.person,
-                    color: Colors.white,
+                    color: colorScheme.onPrimary,
+                    size: 24,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -79,13 +99,16 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Welcome back,',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+                      ),
                     ),
                     Text(
                       'John Doe',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
                     ),
                   ],
                 ),
@@ -94,7 +117,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               'What would you like to do today?',
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onPrimaryContainer,
+              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -153,15 +178,24 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: colorScheme.primary,
-              size: 28,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.onPrimaryContainer.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: colorScheme.onPrimaryContainer,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onPrimaryContainer,
+                  ),
             ),
           ],
         ),
@@ -170,12 +204,19 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildFeaturedSection(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Featured',
-          style: Theme.of(context).textTheme.titleLarge,
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            'Featured',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -218,15 +259,18 @@ class HomeScreen extends StatelessWidget {
     required IconData icon,
     required Color color,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: 200,
       margin: const EdgeInsets.only(right: 16),
       child: Card(
-        elevation: 0, // Tanpa elevation
+        elevation: 0,
+        color: colorScheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
+            color: colorScheme.outlineVariant.withOpacity(0.5),
             width: 1,
           ),
         ),
@@ -235,10 +279,17 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                color: color,
-                size: 32,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -250,7 +301,9 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 description,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -262,12 +315,19 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildRecentActivitySection(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recent Activity',
-          style: Theme.of(context).textTheme.titleLarge,
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            'Recent Activity',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         _buildActivityItem(
@@ -302,32 +362,52 @@ class HomeScreen extends StatelessWidget {
     required IconData icon,
     required Color color,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
       elevation: 0,
+      color: colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant,
+          color: colorScheme.outlineVariant.withOpacity(0.5),
           width: 1,
         ),
       ),
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.2),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Icon(
             icon,
             color: color,
             size: 20,
           ),
         ),
-        title: Text(title),
-        subtitle: Text(time),
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        subtitle: Text(
+          time,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+        ),
         trailing: IconButton(
           icon: const Icon(Icons.arrow_forward_ios, size: 16),
           onPressed: () {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('$title details')),
+              SnackBar(
+                content: Text('$title details'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: colorScheme.secondary,
+              ),
             );
           },
         ),
