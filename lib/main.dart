@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_kasir_cerdas_app/features/auth/providers/auth_provider.dart';
 import 'package:flutter_kasir_cerdas_app/features/auth/screens/login_screen.dart';
+import 'package:flutter_kasir_cerdas_app/features/management/providers/product_category_provider.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        // Add other providers here as needed
+        ChangeNotifierProvider(create: (_) => ProductCategoryProvider()),
       ],
       child: MaterialApp(
         title: 'Kasir Cerdas',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_kasir_cerdas_app/features/management/screens/product_category_screen.dart';
 import 'package:flutter_kasir_cerdas_app/widgets/app_drawer.dart';
 
 class ManagementScreen extends StatelessWidget {
@@ -7,7 +8,7 @@ class ManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Management'),
@@ -122,7 +123,8 @@ class ManagementScreen extends StatelessWidget {
       elevation: 2,
       surfaceTintColor: Theme.of(context).colorScheme.surfaceTint,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16), // Material 3 uses more rounded corners
+        borderRadius:
+            BorderRadius.circular(16), // Material 3 uses more rounded corners
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -163,14 +165,23 @@ class ManagementScreen extends StatelessWidget {
   }
 
   void _handleMenuItemTap(BuildContext context, String itemName) {
-    // For now, we'll just show a snackbar
-    // In a real app, you would navigate to the respective screens
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$itemName not implemented yet'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // Navigate to the appropriate screen based on the selected menu item
+    switch (itemName) {
+      case 'Product Category':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProductCategoryScreen()),
+        );
+        break;
+      default:
+        // For other menu items that aren't implemented yet, show a snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$itemName not implemented yet'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
   }
 }
 

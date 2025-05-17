@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
+import '../../models/api_response.dart';
 import '../storage/secure_storage.dart';
 import 'api_endpoints.dart';
-import '../../models/api_response.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -27,17 +29,20 @@ class ApiClient {
         _secureStorage = secureStorage ?? SecureStorage();
 
   // Generic GET method with error handling
-  Future<ApiResponse> get(String endpoint, {Map<String, String>? queryParams}) async {
+  Future<ApiResponse> get(String endpoint,
+      {Map<String, String>? queryParams}) async {
     try {
       final token = await _secureStorage.getToken();
       final uri = Uri.parse(ApiEndpoints.baseUrl + endpoint)
           .replace(queryParameters: queryParams);
-      
-      final response = await _httpClient.get(
-        uri,
-        headers: _getHeaders(token),
-      ).timeout(const Duration(seconds: 30));
-      
+
+      final response = await _httpClient
+          .get(
+            uri,
+            headers: _getHeaders(token),
+          )
+          .timeout(const Duration(seconds: 30));
+
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(message: 'No internet connection');
@@ -52,41 +57,59 @@ class ApiClient {
     }
   }
 
-  // Generic POST method with error handling
-  Future<ApiResponse> post(String endpoint, {Map<String, dynamic>? body, bool isFormData = false}) async {
+  Future<ApiResponse> post(String endpoint,
+      {Map<String, dynamic>? body, bool isFormData = false}) async {
     try {
       final token = await _secureStorage.getToken();
       final uri = Uri.parse(ApiEndpoints.baseUrl + endpoint);
-      
+
       http.Response response;
-      
+
       if (isFormData) {
         // Form data request (multipart)
         var request = http.MultipartRequest('POST', uri);
-        
+
         // Add headers
         request.headers.addAll(_getHeaders(token, isFormData: true));
-        
-        // Add form fields
+
+        // Add form fields with proper type handling
         if (body != null) {
           body.forEach((key, value) {
             if (value != null) {
-              request.fields[key] = value.toString();
+              // Convert null values to 'null' string for form data
+              String fieldValue;
+              if (value is bool) {
+                fieldValue = value ? '1' : '0';
+              } else {
+                fieldValue = value.toString();
+              }
+              request.fields[key] = fieldValue;
+            } else {
+              // For null values in form data, explicitly use 'null' string
+              request.fields[key] = 'null';
             }
           });
         }
-        
-        final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+
+        debugPrint('Form data fields: ${request.fields}');
+
+        final streamedResponse =
+            await request.send().timeout(const Duration(seconds: 30));
         response = await http.Response.fromStream(streamedResponse);
+
+        // Debug the raw response
+        debugPrint('Raw response: ${response.body}');
       } else {
         // JSON request
-        response = await _httpClient.post(
-          uri,
-          headers: _getHeaders(token),
-          body: body != null ? json.encode(body) : null,
-        ).timeout(const Duration(seconds: 30));
+        response = await _httpClient
+            .post(
+              uri,
+              headers: _getHeaders(token),
+              body: body != null ? json.encode(body) : null,
+            )
+            .timeout(const Duration(seconds: 30));
       }
-      
+
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(message: 'No internet connection');
@@ -102,26 +125,27 @@ class ApiClient {
   }
 
   // Generic PUT method with error handling
-  Future<ApiResponse> put(String endpoint, {Map<String, dynamic>? body, bool isFormData = false}) async {
+  Future<ApiResponse> put(String endpoint,
+      {Map<String, dynamic>? body, bool isFormData = false}) async {
     try {
       if (isFormData) {
         // For form data, we use POST with _method=PUT
-        if (body == null) {
-          body = {};
-        }
+        body ??= {};
         body['_method'] = 'PUT';
         return await post(endpoint, body: body, isFormData: true);
       }
-      
+
       final token = await _secureStorage.getToken();
       final uri = Uri.parse(ApiEndpoints.baseUrl + endpoint);
-      
-      final response = await _httpClient.put(
-        uri,
-        headers: _getHeaders(token),
-        body: body != null ? json.encode(body) : null,
-      ).timeout(const Duration(seconds: 30));
-      
+
+      final response = await _httpClient
+          .put(
+            uri,
+            headers: _getHeaders(token),
+            body: body != null ? json.encode(body) : null,
+          )
+          .timeout(const Duration(seconds: 30));
+
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(message: 'No internet connection');
@@ -141,12 +165,14 @@ class ApiClient {
     try {
       final token = await _secureStorage.getToken();
       final uri = Uri.parse(ApiEndpoints.baseUrl + endpoint);
-      
-      final response = await _httpClient.delete(
-        uri,
-        headers: _getHeaders(token),
-      ).timeout(const Duration(seconds: 30));
-      
+
+      final response = await _httpClient
+          .delete(
+            uri,
+            headers: _getHeaders(token),
+          )
+          .timeout(const Duration(seconds: 30));
+
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(message: 'No internet connection');
@@ -161,22 +187,49 @@ class ApiClient {
     }
   }
 
-  // Helper to handle HTTP responses and convert to ApiResponse
   ApiResponse _handleResponse(http.Response response) {
-    final responseBody = json.decode(response.body);
-    
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return ApiResponse.fromJson(responseBody);
-    } else {
-      // Error handling
-      final statusCode = response.statusCode;
-      final message = responseBody['message'] ?? 'Unknown error occurred';
-      final data = responseBody['data'];
-      
+    try {
+      final responseBody = json.decode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return ApiResponse.fromJson(responseBody);
+      } else {
+        // Error handling
+        final statusCode = response.statusCode;
+        String message = responseBody['message'] ?? 'Unknown error occurred';
+        final data = responseBody['data'];
+
+        // For validation errors (422), try to provide more helpful error messages
+        if (statusCode == 422 && responseBody.containsKey('errors')) {
+          final errors = responseBody['errors'];
+          // Format validation errors into a more readable message
+          if (errors is Map<String, dynamic>) {
+            final errorMsgs = <String>[];
+            errors.forEach((field, messages) {
+              if (messages is List) {
+                errorMsgs.add('$field: ${messages.join(', ')}');
+              } else if (messages is String) {
+                errorMsgs.add('$field: $messages');
+              }
+            });
+            message = 'Validation failed: ${errorMsgs.join('; ')}';
+          }
+        }
+
+        throw ApiException(
+          message: message,
+          statusCode: statusCode,
+          data: responseBody, // Keep the full response for debugging
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) {
+        rethrow;
+      }
+      // Handle JSON parse errors or other unexpected issues
       throw ApiException(
-        message: message,
-        statusCode: statusCode,
-        data: data != null ? data as Map<String, dynamic> : null,
+        message: 'Failed to process response: ${e.toString()}',
+        statusCode: response.statusCode,
       );
     }
   }
@@ -186,15 +239,15 @@ class ApiClient {
     final headers = <String, String>{
       'Accept': 'application/json',
     };
-    
+
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
     }
-    
+
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
-    
+
     return headers;
   }
 }
