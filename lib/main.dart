@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_kasir_cerdas_app/features/products/providers/product_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'features/auth/providers/auth_provider.dart';
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductCategoryProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
       ],
       child: MaterialApp(
         title: 'Kasir Cerdas',
